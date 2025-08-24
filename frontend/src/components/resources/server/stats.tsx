@@ -335,7 +335,7 @@ export const ServerStats = ({
             </div>
           }
         >
-          <div className="flex flex-col gap-8">
+          <div className="grid grid-cols-1 xl:grid-cols-2 gap-8">
             <StatChart server_id={id} type="Cpu" className="w-full h-[250px]" />
             <StatChart
               server_id={id}
