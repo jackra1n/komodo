@@ -354,12 +354,7 @@ export const ServerStats = ({
             />
             <StatChart
               server_id={id}
-              type="Network Ingress"
-              className="w-full h-[250px]"
-            />
-            <StatChart
-              server_id={id}
-              type="Network Egress"
+              type="Bandwidth"
               className="w-full h-[250px]"
             />
           </div>

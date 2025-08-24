@@ -9,7 +9,7 @@ import { convertTsMsToLocalUnixTsInMs } from "@lib/utils";
 import { useTheme } from "@ui/theme";
 import { fmt_utc_date } from "@lib/formatting";
 
-type StatType = "Cpu" | "Memory" | "Disk" | "Network Ingress" | "Network Egress" | "Load Average";
+type StatType = "Cpu" | "Memory" | "Disk" | "Bandwidth" | "Load Average";
 
 type StatDatapoint = { date: number; value: number };
 
@@ -49,6 +49,20 @@ export const StatChart = ({
         { label: "1m", data: one },
         { label: "5m", data: five },
         { label: "15m", data: fifteen },
+      ];
+    }
+    if (type === "Bandwidth") {
+      const ingress = records.map((s) => ({
+        date: convertTsMsToLocalUnixTsInMs(s.ts),
+        value: (s.network_ingress_bytes ?? 0),
+      }));
+      const egress = records.map((s) => ({
+        date: convertTsMsToLocalUnixTsInMs(s.ts),
+        value: (s.network_egress_bytes ?? 0),
+      }));
+      return [
+        { label: "Received", data: ingress },
+        { label: "Sent", data: egress },
       ];
     }
     const single = records.map((stat) => ({
@@ -120,7 +134,7 @@ export const InnerStatChart = ({
   const maxStatValue = Math.max(...(allValues.length ? allValues : [0]));
 
   const { unit, maxUnitValue } = useMemo(() => {
-    if (type === "Network Ingress" || type === "Network Egress") {
+    if (type === "Bandwidth") {
       if (maxStatValue <= BYTES_PER_KB) {
         return { unit: "KB", maxUnitValue: BYTES_PER_KB };
       } else if (maxStatValue <= BYTES_PER_MB) {
@@ -142,14 +156,14 @@ export const InnerStatChart = ({
     (): AxisOptions<StatDatapoint>[] => [
       {
         getValue: (datum) => datum.value,
-        elementType: type === "Load Average" ? "line" : "area",
-        stacked: type !== "Load Average",
+        elementType: (type === "Load Average" || type === "Bandwidth") ? "line" : "area",
+        stacked: type !== "Load Average" && type !== "Bandwidth",
         min: 0,
         max: maxUnitValue,
         formatters: {
           tooltip: (value?: number) => (
             <div className="text-lg font-mono">
-              {(type === "Network Ingress" || type === "Network Egress") && unit
+              {type === "Bandwidth" && unit
                 ? `${(value ?? 0) / (maxUnitValue / 1024)} ${unit}`
                 : type === "Load Average"
                   ? `${(value ?? 0).toFixed(2)}`
@@ -174,7 +188,9 @@ export const InnerStatChart = ({
                 hex_color_by_intention("Neutral"),
                 hex_color_by_intention("Unknown"),
               ]
-            : [getColor(type)],
+            : type === "Bandwidth"
+              ? [hex_color_by_intention("Good"), hex_color_by_intention("Critical")]
+              : [getColor(type)],
         dark: theme === "dark",
         padding: {
           left: 10,
@@ -192,8 +208,7 @@ const getStat = (stat: Types.SystemStatsRecord, type: StatType) => {
   if (type === "Cpu") return stat.cpu_perc || 0;
   if (type === "Memory") return (100 * stat.mem_used_gb) / stat.mem_total_gb;
   if (type === "Disk") return (100 * stat.disk_used_gb) / stat.disk_total_gb;
-  if (type === "Network Ingress") return stat.network_ingress_bytes || 0;
-  if (type === "Network Egress") return stat.network_egress_bytes || 0;
+  if (type === "Bandwidth") return stat.network_ingress_bytes || 0;
   return 0;
 };
 
@@ -201,7 +216,6 @@ const getColor = (type: StatType) => {
   if (type === "Cpu") return hex_color_by_intention("Good");
   if (type === "Memory") return hex_color_by_intention("Warning");
   if (type === "Disk") return hex_color_by_intention("Neutral");
-  if (type === "Network Ingress") return hex_color_by_intention("Good");
-  if (type === "Network Egress") return hex_color_by_intention("Critical");
+  if (type === "Bandwidth") return hex_color_by_intention("Good");
   return hex_color_by_intention("Unknown");
 };
