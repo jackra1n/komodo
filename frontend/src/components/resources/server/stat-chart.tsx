@@ -51,6 +51,40 @@ export const StatChart = ({
         { label: "15m", data: fifteen },
       ];
     }
+
+    // For network charts, convert cumulative bytes to rate in MB/s
+    if (type === "Network Ingress" || type === "Network Egress") {
+      const getBytes = (s: Types.SystemStatsRecord) =>
+        type === "Network Ingress"
+          ? (s.network_ingress_bytes ?? 0)
+          : (s.network_egress_bytes ?? 0);
+      const rate = records.map((s, idx) => {
+        const date = convertTsMsToLocalUnixTsInMs(s.ts);
+        if (idx === 0) return { date, value: 0 };
+        const prev = records[idx - 1];
+        const currBytes = getBytes(s);
+        const prevBytes = getBytes(prev);
+        const deltaBytes = Math.max(0, currBytes - prevBytes);
+        const deltaSeconds = Math.max(1, (s.ts - prev.ts) / 1000);
+        const bytesPerSec = deltaBytes / deltaSeconds;
+        return { date, value: bytesPerSec }; // store as B/s for flexible display
+      });
+      // Debug: peek first/last few points and extrema
+      try {
+        const sample = [...rate.slice(0, 3), ...rate.slice(-3)];
+        const max = rate.reduce((m, d) => Math.max(m, d.value), 0);
+        const min = rate.reduce((m, d) => Math.min(m, d.value), Number.POSITIVE_INFINITY);
+        // eslint-disable-next-line no-console
+        console.debug("[StatChart] network rates (B/s)", type, {
+          points: sample,
+          min,
+          max,
+          count: rate.length,
+        });
+      } catch {}
+      return [{ label: type, data: rate }];
+    }
+
     const single = records.map((stat) => ({
       date: convertTsMsToLocalUnixTsInMs(stat.ts),
       value: getStat(stat, type),
@@ -72,7 +106,6 @@ export const StatChart = ({
   );
 };
 
-const BYTES_PER_GB = 1073741824.0;
 const BYTES_PER_MB = 1048576.0;
 const BYTES_PER_KB = 1024.0;
 
@@ -115,51 +148,81 @@ export const InnerStatChart = ({
     };
   }, []);
 
-  // Determine the dynamic scaling for network-related types
+  // Determine the axis max dynamically
   const allValues = (seriesData ?? [{ data: stats ?? [] }]).flatMap((s) => s.data.map((d) => d.value));
   const maxStatValue = Math.max(...(allValues.length ? allValues : [0]));
 
-  const { unit, maxUnitValue } = useMemo(() => {
+  const { unit, unitDivisor, maxUnitValue } = useMemo(() => {
     if (type === "Network Ingress" || type === "Network Egress") {
-      if (maxStatValue <= BYTES_PER_KB) {
-        return { unit: "KB", maxUnitValue: BYTES_PER_KB };
-      } else if (maxStatValue <= BYTES_PER_MB) {
-        return { unit: "MB", maxUnitValue: BYTES_PER_MB };
-      } else if (maxStatValue <= BYTES_PER_GB) {
-        return { unit: "GB", maxUnitValue: BYTES_PER_GB };
-      } else {
-        return { unit: "TB", maxUnitValue: BYTES_PER_GB * 1024 }; // Larger scale for high values
-      }
+      // Choose best unit based on observed max B/s
+      const choose = () => {
+        if (maxStatValue >= BYTES_PER_MB) {
+          return { unit: "MB/s" as const, unitDivisor: BYTES_PER_MB };
+        } else if (maxStatValue >= BYTES_PER_KB) {
+          return { unit: "KB/s" as const, unitDivisor: BYTES_PER_KB };
+        } else {
+          return { unit: "B/s" as const, unitDivisor: 1 };
+        }
+      };
+      const chosen = choose();
+      const ret = {
+        unit: chosen.unit,
+        unitDivisor: chosen.unitDivisor,
+        maxUnitValue: (maxStatValue === 0 ? 1 : maxStatValue * 1.2) / chosen.unitDivisor,
+      };
+      try {
+        // eslint-disable-next-line no-console
+        console.debug("[StatChart] axis", type, { maxStatValue_Bps: maxStatValue, unit: ret.unit, maxUnitValue_units: ret.maxUnitValue });
+      } catch {}
+      return ret;
     }
     if (type === "Load Average") {
-      // Leave unitless; set max slightly above observed
-      return { unit: "", maxUnitValue: maxStatValue === 0 ? 1 : maxStatValue * 1.2 };
+      return { unit: "", unitDivisor: 1, maxUnitValue: maxStatValue === 0 ? 1 : maxStatValue * 1.2 };
     }
-    return { unit: "", maxUnitValue: 100 }; // Default for CPU, memory, disk
+    return { unit: "", unitDivisor: 1, maxUnitValue: 100 }; // Default for CPU, memory, disk
   }, [type, maxStatValue]);
 
   const valueAxis = useMemo(
     (): AxisOptions<StatDatapoint>[] => [
       {
-        getValue: (datum) => datum.value,
+        getValue: (datum) => {
+          if (type === "Network Ingress" || type === "Network Egress") {
+            // Convert stored B/s to selected unit for plotting
+            return datum.value / unitDivisor;
+          }
+          return datum.value;
+        },
         elementType: type === "Load Average" ? "line" : "area",
         stacked: type !== "Load Average",
         min: 0,
         max: maxUnitValue,
         formatters: {
-          tooltip: (value?: number) => (
-            <div className="text-lg font-mono">
-              {(type === "Network Ingress" || type === "Network Egress") && unit
-                ? `${(value ?? 0) / (maxUnitValue / 1024)} ${unit}`
-                : type === "Load Average"
-                  ? `${(value ?? 0).toFixed(2)}`
-                  : `${value?.toFixed(2)}%`}
-            </div>
-          ),
+          tooltip: (value?: number) => {
+            const v = value ?? 0;
+            const fmt = (u: string) =>
+              u === "MB/s" ? v.toFixed(2) : u === "KB/s" ? v.toFixed(1) : Math.round(v).toString();
+            return (
+              <div className="text-lg font-mono">
+                {type === "Network Ingress" || type === "Network Egress"
+                  ? `${fmt(unit)} ${unit}`
+                  : type === "Load Average"
+                    ? `${v.toFixed(2)}`
+                    : `${v.toFixed(2)}%`}
+              </div>
+            );
+          },
+          // Format Y-axis ticks
+          scale: (value?: number) => {
+            const v = value ?? 0;
+            if (type === "Network Ingress" || type === "Network Egress") {
+              return unit === "MB/s" ? `${v.toFixed(2)} MB/s` : unit === "KB/s" ? `${v.toFixed(1)} KB/s` : `${Math.round(v)} B/s`;
+            }
+            return type === "Load Average" ? `${v.toFixed(1)}` : `${v.toFixed(0)}%`;
+          },
         },
       },
     ],
-    [type, maxUnitValue, unit]
+    [type, maxUnitValue, unit, unitDivisor]
   );
   return (
     <Chart
