@@ -3,13 +3,12 @@ import { ResourceLink, ResourcePageHeader } from "@components/resources/common";
 import { useServer } from "@components/resources/server";
 import {
   ConfirmButton,
-  ContainerPortLink,
+  ContainerPortsTableView,
   DOCKER_LINK_ICONS,
   DockerLabelsSection,
   DockerResourceLink,
 } from "@components/util";
 import {
-  useContainerPortsMap,
   useLocalStorage,
   useRead,
   useSetTitle,
@@ -69,7 +68,6 @@ const ContainerPageInner = ({
     },
     { refetchInterval: 10_000 }
   ).data?.find((container) => container.name === container_name);
-  const ports_map = useContainerPortsMap(list_container?.ports ?? []);
 
   const state = list_container?.state ?? Types.ContainerStateStatusEnum.Empty;
   const intention = container_state_intention(state);
@@ -144,16 +142,15 @@ const ContainerPageInner = ({
                     />
                   </Fragment>
                 ))}
-                {Object.keys(ports_map).map((host_port) => (
-                  <Fragment key={host_port}>
+                {list_container?.ports?.length ? (
+                  <>
                     |
-                    <ContainerPortLink
-                      host_port={host_port}
-                      ports={ports_map[host_port]}
+                    <ContainerPortsTableView
+                      ports={list_container.ports}
                       server_id={id}
                     />
-                  </Fragment>
-                ))}
+                  </>
+                ) : null}
               </div>
             </div>
           </div>
