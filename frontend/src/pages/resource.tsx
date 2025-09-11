@@ -133,48 +133,48 @@ export const ResourceHeader = ({
   const { canWrite } = usePermissions({ type, id });
 
   return (
-    <div className="w-full flex flex-col gap-4">
-      <div className="flex flex-col gap-4 border rounded-md">
-        <Components.ResourcePageHeader id={id} />
-        <div className="flex items-center gap-x-4 gap-y-2 flex-wrap px-4 py-0">
-          {infoEntries.map(([key, Info]) => (
-            <div key={key} className="pr-4 text-sm border-r">
-              <Info id={id} />
-            </div>
-          ))}
-          {statusEntries.map(([key, Status]) => (
-            <Status key={key} id={id} />
-          ))}
-        </div>
-        {links && links.length > 0 && (
-          <div className="flex items-center gap-x-4 gap-y-2 flex-wrap px-4 py-0">
-            {links?.map((link) => (
-              <a
-                key={link}
-                target="_blank"
-                href={link}
-                className="flex gap-2 items-center pr-4 text-sm border-r cursor-pointer hover:underline last:pr-0 last:border-none"
-              >
-                <LinkIcon className="w-4" />
-                <div className="max-w-[150px] lg:max-w-[250px] text-nowrap overflow-hidden overflow-ellipsis">
-                  {link}
-                </div>
-              </a>
-            ))}
+    <div className="w-full flex flex-col gap-4 border rounded-md">
+      <Components.ResourcePageHeader id={id} />
+      <div className="flex items-center gap-x-4 gap-y-2 flex-wrap px-4 py-0">
+        {infoEntries.map(([key, Info]) => (
+          <div key={key} className="pr-4 text-sm border-r">
+            <Info id={id} />
           </div>
-        )}
-        <div className="flex items-center gap-2 flex-wrap p-4 pt-0">
-          <p className="text-sm text-muted-foreground">Tags:</p>
-          <ResourceTags
-            target={{ id, type }}
-            className="text-sm"
-            disabled={!canWrite}
-            click_to_delete
-          />
-          {canWrite && <AddTags target={{ id, type }} />}
-        </div>
+        ))}
+        {statusEntries.map(([key, Status]) => (
+          <Status key={key} id={id} />
+        ))}
       </div>
-      <ResourceDescription type={type} id={id} disabled={!canWrite} />
+      {links && links.length > 0 && (
+        <div className="flex items-center gap-x-4 gap-y-2 flex-wrap px-4 py-0">
+          {links?.map((link) => (
+            <a
+              key={link}
+              target="_blank"
+              href={link}
+              className="flex gap-2 items-center pr-4 text-sm border-r cursor-pointer hover:underline last:pr-0 last:border-none"
+            >
+              <LinkIcon className="w-4" />
+              <div className="max-w-[150px] lg:max-w-[250px] text-nowrap overflow-hidden overflow-ellipsis">
+                {link}
+              </div>
+            </a>
+          ))}
+        </div>
+      )}
+      <div className="flex items-center gap-2 flex-wrap px-4">
+        <p className="text-sm text-muted-foreground">Tags:</p>
+        <ResourceTags
+          target={{ id, type }}
+          className="text-sm"
+          disabled={!canWrite}
+          click_to_delete
+        />
+        {canWrite && <AddTags target={{ id, type }} />}
+      </div>
+      <div className="flex mx-4 mb-4 h-full">
+        <ResourceDescription type={type} id={id} disabled={!canWrite} />
+      </div>
     </div>
   );
 };
