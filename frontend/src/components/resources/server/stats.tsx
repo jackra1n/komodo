@@ -70,45 +70,51 @@ export const ServerStats = ({
       <div className="flex flex-col gap-8">
         {/* System Info */}
         <Section title="System Info">
-          <DataTable
-            tableKey="system-info"
-            data={
-              info
-                ? [{ ...info, mem_total: stats?.mem_total_gb, disk_total }]
-                : []
-            }
-            columns={[
-              {
-                header: "Hostname",
-                accessorKey: "host_name",
-              },
-              {
-                header: "Os",
-                accessorKey: "os",
-              },
-              {
-                header: "Kernel",
-                accessorKey: "kernel",
-              },
-              {
-                header: "CPU",
-                accessorKey: "cpu_brand",
-              },
-              {
-                header: "Core Count",
-                accessorFn: ({ core_count }) =>
-                  `${core_count} Core${(core_count || 0) > 1 ? "s" : ""}`,
-              },
-              {
-                header: "Total Memory",
-                accessorFn: ({ mem_total }) => `${mem_total?.toFixed(2)} GB`,
-              },
-              {
-                header: "Total Disk Size",
-                accessorFn: ({ disk_total }) => `${disk_total?.toFixed(2)} GB`,
-              },
-            ]}
-          />
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            <Card className="w-full">
+              <CardHeader className="py-3">
+                <CardTitle className="text-sm text-muted-foreground">Hostname</CardTitle>
+              </CardHeader>
+              <CardContent className="pt-0">
+                <div className="text-base font-medium break-all">
+                  {info?.host_name ?? "—"}
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card className="w-full">
+              <CardHeader className="py-3">
+                <CardTitle className="text-sm text-muted-foreground">OS</CardTitle>
+              </CardHeader>
+              <CardContent className="pt-0">
+                <div className="text-base font-medium break-all">
+                  {info?.os ?? "—"}
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card className="w-full">
+              <CardHeader className="py-3">
+                <CardTitle className="text-sm text-muted-foreground">Kernel</CardTitle>
+              </CardHeader>
+              <CardContent className="pt-0">
+                <div className="text-base font-medium break-all">
+                  {info?.kernel ?? "—"}
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card className="w-full">
+              <CardHeader className="py-3">
+                <CardTitle className="text-sm text-muted-foreground">CPU</CardTitle>
+              </CardHeader>
+              <CardContent className="pt-0">
+                <div className="text-base font-medium break-all">
+                  {info?.cpu_brand ?? "—"}
+                </div>
+              </CardContent>
+            </Card>
+          </div>
         </Section>
 
         {/* Current Overview */}
