@@ -41,7 +41,7 @@ import { Tooltip, TooltipContent, TooltipTrigger } from "@ui/tooltip";
 
 export const useServer = (id?: string) =>
   useRead("ListServers", {}, { refetchInterval: 10_000 }).data?.find(
-    (d) => d.id === id
+    (d) => d.id === id,
   );
 
 export const useFullServer = (id: string) =>
@@ -51,24 +51,26 @@ export const useFullServer = (id: string) =>
 export const useVersionMismatch = (serverId?: string) => {
   const core_version = useRead("GetVersion", {}).data?.version;
   const server_version = useServer(serverId)?.info.version;
-  
+
   const unknown = !server_version || server_version === "Unknown";
-  const mismatch = !!server_version && !!core_version && server_version !== core_version;
-  
+  const mismatch =
+    !!server_version && !!core_version && server_version !== core_version;
+
   return { unknown, mismatch, hasVersionMismatch: mismatch && !unknown };
 };
 
 const Icon = ({ id, size }: { id?: string; size: number }) => {
   const state = useServer(id)?.info.state;
   const { hasVersionMismatch } = useVersionMismatch(id);
-  
+
   return (
     <Server
       className={cn(
         `w-${size} h-${size}`,
-        state && stroke_color_class_by_intention(
-          server_state_intention(state, hasVersionMismatch)
-        )
+        state &&
+          stroke_color_class_by_intention(
+            server_state_intention(state, hasVersionMismatch),
+          ),
       )}
     />
   );
@@ -89,17 +91,17 @@ const ConfigTabs = ({ id }: { id: string }) => {
 
   const deployments =
     useRead("ListDeployments", {}).data?.filter(
-      (deployment) => deployment.info.server_id === id
+      (deployment) => deployment.info.server_id === id,
     ) ?? [];
   const noDeployments = deployments.length === 0;
   const repos =
     useRead("ListRepos", {}).data?.filter(
-      (repo) => repo.info.server_id === id
+      (repo) => repo.info.server_id === id,
     ) ?? [];
   const noRepos = repos.length === 0;
   const stacks =
     useRead("ListStacks", {}).data?.filter(
-      (stack) => stack.info.server_id === id
+      (stack) => stack.info.server_id === id,
     ) ?? [];
   const noStacks = stacks.length === 0;
 
@@ -108,39 +110,32 @@ const ConfigTabs = ({ id }: { id: string }) => {
   const currentView = view === "Resources" && noResources ? "Config" : view;
 
   const tabsList = (
-    <TabsList className="justify-start w-fit">
-      <TabsTrigger value="Config" className="w-[110px]">
+    <TabsList className="justify-start w-full">
+      <TabsTrigger value="Config" className="w-full">
         Config
       </TabsTrigger>
 
-      <TabsTrigger value="Stats" className="w-[110px]">
+      <TabsTrigger value="Stats" className="w-full">
         Stats
       </TabsTrigger>
 
-      <TabsTrigger value="Docker" className="w-[110px]">
+      <TabsTrigger value="Docker" className="w-full">
         Docker
       </TabsTrigger>
 
-      <TabsTrigger
-        value="Resources"
-        className="w-[110px]"
-        disabled={noResources}
-      >
+      <TabsTrigger value="Resources" className="w-full" disabled={noResources}>
         Resources
       </TabsTrigger>
 
       {(!terminals_disabled || !container_exec_disabled) && canWrite && (
-        <TabsTrigger value="Terminals" className="w-[110px]">
+        <TabsTrigger value="Terminals" className="w-full">
           Terminals
         </TabsTrigger>
       )}
     </TabsList>
   );
   return (
-    <Tabs
-      value={currentView}
-      onValueChange={setView as any}
-    >
+    <Tabs value={currentView} onValueChange={setView as any}>
       <TabsContent value="Config">
         <ServerConfig id={id} titleOther={tabsList} />
       </TabsContent>
@@ -221,10 +216,10 @@ export const ServerVersion = ({ id }: { id: string }) => {
   const core_version = useRead("GetVersion", {}).data?.version;
   const version = useServer(id)?.info.version;
   const server_state = useServer(id)?.info.state;
-  
+
   const unknown = !version || version === "Unknown";
   const mismatch = !!version && !!core_version && version !== core_version;
-  
+
   // Don't show version for disabled servers
   if (server_state === Types.ServerState.Disabled) {
     return (
@@ -234,7 +229,7 @@ export const ServerVersion = ({ id }: { id: string }) => {
             <AlertCircle
               className={cn(
                 "w-4 h-4",
-                stroke_color_class_by_intention("Unknown")
+                stroke_color_class_by_intention("Unknown"),
               )}
             />
             Unknown
@@ -242,13 +237,14 @@ export const ServerVersion = ({ id }: { id: string }) => {
         </TooltipTrigger>
         <TooltipContent>
           <div>
-            Server is <span className="font-bold">disabled</span> - version unknown.
+            Server is <span className="font-bold">disabled</span> - version
+            unknown.
           </div>
         </TooltipContent>
       </Tooltip>
     );
   }
-  
+
   return (
     <Tooltip>
       <TooltipTrigger asChild>
@@ -257,14 +253,14 @@ export const ServerVersion = ({ id }: { id: string }) => {
             <AlertCircle
               className={cn(
                 "w-4 h-4",
-                stroke_color_class_by_intention("Unknown")
+                stroke_color_class_by_intention("Unknown"),
               )}
             />
           ) : mismatch ? (
             <AlertCircle
               className={cn(
                 "w-4 h-4",
-                stroke_color_class_by_intention("Critical")
+                stroke_color_class_by_intention("Critical"),
               )}
             />
           ) : (
@@ -306,7 +302,11 @@ export const ServerComponents: RequiredResourceComponents = {
   ),
 
   Dashboard: () => {
-    const summary = useRead("GetServersSummary", {}, { refetchInterval: 15_000 }).data;
+    const summary = useRead(
+      "GetServersSummary",
+      {},
+      { refetchInterval: 15_000 },
+    ).data;
     return (
       <DashboardPieChart
         data={[
@@ -363,18 +363,19 @@ export const ServerComponents: RequiredResourceComponents = {
   State: ({ id }) => {
     const state = useServer(id)?.info.state;
     const { hasVersionMismatch } = useVersionMismatch(id);
-    
+
     // Show full version mismatch text
-    const displayState = state === Types.ServerState.Ok && hasVersionMismatch 
-      ? "Version Mismatch" 
-      : state === Types.ServerState.NotOk 
-        ? "Not Ok" 
-        : state;
-    
+    const displayState =
+      state === Types.ServerState.Ok && hasVersionMismatch
+        ? "Version Mismatch"
+        : state === Types.ServerState.NotOk
+          ? "Not Ok"
+          : state;
+
     return (
-      <StatusBadge 
-        text={displayState} 
-        intent={server_state_intention(state, hasVersionMismatch)} 
+      <StatusBadge
+        text={displayState}
+        intent={server_state_intention(state, hasVersionMismatch)}
       />
     );
   },
@@ -392,7 +393,7 @@ export const ServerComponents: RequiredResourceComponents = {
           {
             enabled: server ? server.info.state !== "Disabled" : false,
             refetchInterval: 5000,
-          }
+          },
         ).data?.core_count ?? 0;
       return (
         <div className="flex gap-2 items-center">
@@ -409,12 +410,12 @@ export const ServerComponents: RequiredResourceComponents = {
         {
           enabled: server ? server.info.state !== "Disabled" : false,
           refetchInterval: 5000,
-        }
+        },
       ).data;
-      
+
       if (!stats?.load_average) return null;
       const one = stats.load_average?.one;
-      
+
       return (
         <div className="flex gap-2 items-center">
           <Cpu className="w-4 h-4" />
@@ -430,7 +431,7 @@ export const ServerComponents: RequiredResourceComponents = {
         {
           enabled: server ? server.info.state !== "Disabled" : false,
           refetchInterval: 5000,
-        }
+        },
       ).data;
       return (
         <div className="flex gap-2 items-center">
@@ -447,11 +448,11 @@ export const ServerComponents: RequiredResourceComponents = {
         {
           enabled: server ? server.info.state !== "Disabled" : false,
           refetchInterval: 5000,
-        }
+        },
       ).data;
       const disk_total_gb = stats?.disks.reduce(
         (acc, curr) => acc + curr.total_gb,
-        0
+        0,
       );
       return (
         <div className="flex gap-2 items-center">
@@ -469,14 +470,14 @@ export const ServerComponents: RequiredResourceComponents = {
       const starting = useRead(
         "GetServerActionState",
         { server: id },
-        { refetchInterval: 5000 }
+        { refetchInterval: 5000 },
       ).data?.starting_containers;
       const dontShow =
         useRead("ListDockerContainers", {
           server: id,
         }).data?.every(
           (container) =>
-            container.state === Types.ContainerStateStatusEnum.Running
+            container.state === Types.ContainerStateStatusEnum.Running,
         ) ?? true;
       if (dontShow) {
         return null;
@@ -500,7 +501,7 @@ export const ServerComponents: RequiredResourceComponents = {
       const restarting = useRead(
         "GetServerActionState",
         { server: id },
-        { refetchInterval: 5000 }
+        { refetchInterval: 5000 },
       ).data?.restarting_containers;
       const pending = isPending || restarting;
       return (
@@ -522,14 +523,14 @@ export const ServerComponents: RequiredResourceComponents = {
       const pausing = useRead(
         "GetServerActionState",
         { server: id },
-        { refetchInterval: 5000 }
+        { refetchInterval: 5000 },
       ).data?.pausing_containers;
       const dontShow =
         useRead("ListDockerContainers", {
           server: id,
         }).data?.every(
           (container) =>
-            container.state !== Types.ContainerStateStatusEnum.Running
+            container.state !== Types.ContainerStateStatusEnum.Running,
         ) ?? true;
       if (dontShow) {
         return null;
@@ -554,14 +555,14 @@ export const ServerComponents: RequiredResourceComponents = {
       const unpausing = useRead(
         "GetServerActionState",
         { server: id },
-        { refetchInterval: 5000 }
+        { refetchInterval: 5000 },
       ).data?.unpausing_containers;
       const dontShow =
         useRead("ListDockerContainers", {
           server: id,
         }).data?.every(
           (container) =>
-            container.state !== Types.ContainerStateStatusEnum.Paused
+            container.state !== Types.ContainerStateStatusEnum.Paused,
         ) ?? true;
       if (dontShow) {
         return null;
@@ -585,7 +586,7 @@ export const ServerComponents: RequiredResourceComponents = {
       const stopping = useRead(
         "GetServerActionState",
         { server: id },
-        { refetchInterval: 5000 }
+        { refetchInterval: 5000 },
       ).data?.stopping_containers;
       const pending = isPending || stopping;
       return (
@@ -616,11 +617,12 @@ export const ServerComponents: RequiredResourceComponents = {
     const { hasVersionMismatch } = useVersionMismatch(id);
 
     // Determine display state for header (longer text is okay in header)
-    const displayState = server?.info.state === Types.ServerState.Ok && hasVersionMismatch
-      ? "Version Mismatch"
-      : server?.info.state === Types.ServerState.NotOk
-        ? "Not Ok"
-        : server?.info.state;
+    const displayState =
+      server?.info.state === Types.ServerState.Ok && hasVersionMismatch
+        ? "Version Mismatch"
+        : server?.info.state === Types.ServerState.NotOk
+          ? "Not Ok"
+          : server?.info.state;
 
     return (
       <ResourcePageHeader
